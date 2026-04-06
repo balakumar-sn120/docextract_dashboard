@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+# This command creates the venv and installs requirements during the build
+setup_cache = [".venv"]
+build_command = "python -m venv .venv && .venv/bin/pip install -r requirements.txt"
+
+[deploy]
+# This tells Railway to use the python inside the venv to start your app
+start_command = ".venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+restart_policy_max_retries = 3
