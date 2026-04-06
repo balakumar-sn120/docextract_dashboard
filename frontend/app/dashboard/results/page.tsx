@@ -206,7 +206,7 @@ export default function ResultsPage() {
                 {result ? Math.round(result.confidence) : '—'}%
               </span>
               {result && result.confidence < 70 && (
-                <AlertTriangle className="w-5 h-5 text-red-500" title="Low confidence" />
+                <AlertTriangle className="w-5 h-5 text-red-500" aria-label="Low confidence" />
               )}
             </div>
           </div>
