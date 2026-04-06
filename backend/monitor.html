@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocExtract — Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d0b;--s1:#111411;--s2:#171a17;--border:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.12);--text:#e8ebe6;--muted:#6b7870;--accent:#6ee97b;--amber:#f0b429;--red:#e05252;--blue:#5b9cf6}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-weight:300;min-height:100vh;-webkit-font-smoothing:antialiased}
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 36px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,13,11,.92);backdrop-filter:blur(12px);z-index:10}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;letter-spacing:-.02em}
+.header-right{display:flex;align-items:center;gap:16px}
+.refresh-btn{background:none;border:1px solid var(--b2);border-radius:8px;color:var(--muted);padding:7px 14px;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.refresh-btn:hover{background:var(--s2);color:var(--text)}
+.last-refresh{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+main{padding:32px 36px;max-width:1200px;margin:0 auto}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.grid{display:grid;gap:12px;margin-bottom:32px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:20px}
+.metric-val{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1;margin-bottom:4px}
+.metric-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.ok{color:var(--accent)}.ok .status-dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.warn{color:var(--amber)}.warn .status-dot{background:var(--amber)}
+.err{color:var(--red)}.err .status-dot{background:var(--red)}
+.service-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.service-row:last-child{border-bottom:none}
+.service-name{font-size:13px;font-weight:700}
+.service-detail{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500}
+.badge-ok{background:rgba(110,233,123,.1);color:var(--accent)}
+.badge-warn{background:rgba(240,180,41,.1);color:var(--amber)}
+.badge-err{background:rgba(224,82,82,.1);color:var(--red)}
+.badge-proc{background:rgba(91,156,246,.1);color:var(--blue)}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.conf-bar{display:flex;align-items:center;gap:8px}
+.bar-track{flex:1;height:3px;background:var(--s2);border-radius:2px;min-width:50px}
+.bar-fill{height:100%;border-radius:2px}
+.skeleton{background:linear-gradient(90deg,var(--s2) 25%,var(--s1) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px}
+@keyframes shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+input{background:var(--s2);border:1px solid var(--b2);color:var(--text);border-radius:8px;padding:9px 14px;font-family:'Lato',sans-serif;font-size:13px;width:100%;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--accent)}
+label{display:block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#0b0d0b}
+.btn-primary:hover{background:#82ed8d}
+.btn-secondary{background:var(--s2);color:var(--text);border:1px solid var(--b2)}
+.btn-secondary:hover{background:#1f241f}
+.config-section{background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:24px;margin-bottom:32px}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.err-msg{padding:10px 14px;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.2);border-radius:8px;font-size:13px;color:var(--red);margin-top:10px}
+.ok-msg{padding:10px 14px;background:rgba(110,233,123,.08);border:1px solid rgba(110,233,123,.18);border-radius:8px;font-size:13px;color:var(--accent);margin-top:10px}
+.chart-bar{display:flex;align-items:flex-end;gap:4px;height:80px;padding:0 4px}
+.c-bar{flex:1;border-radius:3px 3px 0 0;min-width:8px;transition:height .4s ease;cursor:pointer;position:relative}
+.c-bar:hover::after{content:attr(data-tip);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--b2);color:var(--text);font-size:10px;padding:3px 7px;border-radius:4px;white-space:nowrap;font-family:'DM Mono',monospace;margin-bottom:4px}
+@media(max-width:768px){.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b0d0b" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
+    <span class="logo-text">DocExtract Monitor</span>
+  </div>
+  <div class="header-right">
+    <span class="last-refresh" id="lastRefresh">—</span>
+    <button class="refresh-btn" onclick="loadAll()">
+      <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+      Refresh
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Config panel -->
+  <div class="config-section" id="configSection">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:16px">Connect to your API</div>
+    <div class="config-grid">
+      <div>
+        <label>API BASE URL</label>
+        <input id="apiUrl" type="url" placeholder="https://your-api.railway.app" value="">
+      </div>
+      <div>
+        <label>ADMIN KEY (X-Admin-Key)</label>
+        <input id="adminKey" type="password" placeholder="your-admin-secret-key" value="">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="connect()">Connect & load data</button>
+    <div id="connectMsg"></div>
+  </div>
+
+  <!-- System health -->
+  <div class="section-label">System health</div>
+  <div class="grid g3" style="margin-bottom:32px">
+    <div class="card">
+      <div class="service-row" style="padding-top:0">
+        <div>
+          <div class="service-name">FastAPI (Railway)</div>
+          <div class="service-detail" id="apiVersion">—</div>
+        </div>
+        <span class="badge" id="apiStatus">—</span>
+      </div>
+      <div class="service-row">
+        <div>
+          <div class="service-name">Supabase DB</div>
+          <div class="service-detail">PostgreSQL</div>
+        </div>
+        <span class="badge" id="supabaseStatus">—</span>
+      </div>
+      <div class="service-row">
+        <div>
+          <div class="service-name">Redis / Celery</div>
+          <div class="service-detail">Job queue</div>
+        </div>
+        <span class="badge" id="redisStatus">—</span>
+      </div>
+      <div class="service-row" style="padding-bottom:0">
+        <div>
+          <div class="service-name">Groq API</div>
+          <div class="service-detail">LLM provider</div>
+        </div>
+        <span class="badge" id="groqStatus">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">Overall status</div>
+      <div class="metric-val" id="overallStatus" style="font-size:28px">—</div>
+      <div class="metric-label" style="margin-top:8px" id="statusDetail">Connect to load</div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="section-label" style="margin-bottom:8px">Environment</div>
+        <span class="badge badge-ok" id="envBadge">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">Quick actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-secondary" style="width:100%;justify-content:flex-start" onclick="openDocs()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Open API docs (/docs)
+        </button>
+        <button class="btn btn-secondary" style="width:100%;justify-content:flex-start" onclick="loadFlagged()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          View flagged jobs
+        </button>
+        <button class="btn btn-secondary" style="width:100%;justify-content:flex-start" onclick="addClientModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Add new client
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section-label">Job statistics</div>
+  <div class="grid g4" style="margin-bottom:32px" id="statsGrid">
+    <div class="card"><div class="metric-val skeleton" style="height:36px;width:60px"></div><div class="metric-label" style="margin-top:8px">Total jobs</div></div>
+    <div class="card"><div class="metric-val skeleton" style="height:36px;width:60px"></div><div class="metric-label" style="margin-top:8px">Completed</div></div>
+    <div class="card"><div class="metric-val skeleton" style="height:36px;width:60px"></div><div class="metric-label" style="margin-top:8px">This month</div></div>
+    <div class="card"><div class="metric-val skeleton" style="height:36px;width:60px"></div><div class="metric-label" style="margin-top:8px">Avg confidence</div></div>
+  </div>
+
+  <!-- Status breakdown + throughput -->
+  <div class="grid g2" style="margin-bottom:32px">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:16px">Status breakdown</div>
+      <div id="statusBreakdown">
+        <div class="skeleton" style="height:16px;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:16px;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:16px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label" style="margin-bottom:4px">Throughput — last 7 days</div>
+      <div class="chart-bar" id="throughputChart">
+        <div style="color:var(--muted);font-size:12px;display:flex;align-items:center;width:100%">Connect to view</div>
+      </div>
+      <div id="chartLabels" style="display:flex;gap:4px;padding:4px 4px 0;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)"></div>
+    </div>
+  </div>
+
+  <!-- Clients -->
+  <div class="section-label">Clients</div>
+  <div class="card" style="margin-bottom:32px">
+    <div id="clientsTable">
+      <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">Connect to load clients</div>
+    </div>
+  </div>
+
+  <!-- Flagged jobs -->
+  <div class="section-label">Flagged jobs — needs review</div>
+  <div class="card" style="margin-bottom:32px">
+    <div id="flaggedTable">
+      <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">Connect to load</div>
+    </div>
+  </div>
+
+  <!-- Add client form (hidden) -->
+  <div id="addClientForm" style="display:none" class="config-section">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:16px">Add new client</div>
+    <div class="config-grid">
+      <div><label>NAME</label><input id="newName" placeholder="Acme Ltd"></div>
+      <div><label>EMAIL</label><input id="newEmail" type="email" placeholder="accounts@acme.com"></div>
+      <div><label>COMPANY</label><input id="newCompany" placeholder="Acme Solutions Pvt Ltd"></div>
+      <div><label>PLAN</label>
+        <select id="newPlan" style="background:var(--s2);border:1px solid var(--b2);color:var(--text);border-radius:8px;padding:9px 14px;font-family:'Lato',sans-serif;font-size:13px;width:100%;outline:none">
+          <option value="starter">Starter (500 docs/mo)</option>
+          <option value="business">Business (2000 docs/mo)</option>
+          <option value="unlimited">Unlimited</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="createClient()">Create client + generate API key</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('addClientForm').style.display='none'">Cancel</button>
+    </div>
+    <div id="clientMsg"></div>
+  </div>
+
+</main>
+
+<script>
+let API_URL = localStorage.getItem('monitor_api_url') || '';
+let ADMIN_KEY = localStorage.getItem('monitor_admin_key') || '';
+
+if (API_URL) document.getElementById('apiUrl').value = API_URL;
+
+async function connect() {
+  API_URL = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+  ADMIN_KEY = document.getElementById('adminKey').value.trim();
+  localStorage.setItem('monitor_api_url', API_URL);
+  localStorage.setItem('monitor_admin_key', ADMIN_KEY);
+  const msg = document.getElementById('connectMsg');
+  try {
+    const r = await fetch(`${API_URL}/health`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    msg.className = 'ok-msg';
+    msg.textContent = '✓ Connected successfully';
+    document.getElementById('configSection').style.marginBottom = '8px';
+    loadAll();
+  } catch(e) {
+    msg.className = 'err-msg';
+    msg.textContent = `✗ Cannot connect: ${e.message}`;
+  }
+}
+
+async function loadAll() {
+  if (!API_URL) return;
+  updateRefreshTime();
+  spin(true);
+  await Promise.all([loadHealth(), loadStats(), loadClients(), loadFlagged()]);
+  spin(false);
+}
+
+async function loadHealth() {
+  try {
+    const r = await fetch(`${API_URL}/health`);
+    const d = await r.json();
+    setCheck('apiStatus', d.status === 'healthy' ? 'ok' : 'warn', d.status);
+    setCheck('supabaseStatus', d.checks?.supabase === 'ok' ? 'ok' : 'err', d.checks?.supabase || '?');
+    setCheck('redisStatus', d.checks?.redis === 'ok' ? 'ok' : 'warn', d.checks?.redis || '?');
+    setCheck('groqStatus', d.checks?.groq === 'ok' ? 'ok' : 'warn', d.checks?.groq || '?');
+    document.getElementById('apiVersion').textContent = `v${d.version} · ${d.environment}`;
+    const el = document.getElementById('overallStatus');
+    el.textContent = d.status === 'healthy' ? '● Healthy' : '⚠ Degraded';
+    el.style.color = d.status === 'healthy' ? 'var(--accent)' : 'var(--amber)';
+    document.getElementById('statusDetail').textContent = `Last checked ${new Date().toLocaleTimeString()}`;
+    const env = document.getElementById('envBadge');
+    env.textContent = d.environment;
+    env.className = 'badge ' + (d.environment === 'production' ? 'badge-ok' : 'badge-warn');
+  } catch(e) {
+    setCheck('apiStatus', 'err', 'offline');
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/stats`, { headers: {'X-Admin-Key': ADMIN_KEY} });
+    const d = await r.json();
+    const grid = document.getElementById('statsGrid');
+    grid.innerHTML = `
+      <div class="card"><div class="metric-val">${d.total_jobs}</div><div class="metric-label" style="margin-top:6px">Total jobs</div></div>
+      <div class="card"><div class="metric-val" style="color:var(--accent)">${d.completed}</div><div class="metric-label" style="margin-top:6px">Completed</div></div>
+      <div class="card"><div class="metric-val" style="color:var(--blue)">${d.docs_this_month}</div><div class="metric-label" style="margin-top:6px">This month</div></div>
+      <div class="card"><div class="metric-val" style="color:${d.avg_confidence>=.9?'var(--accent)':d.avg_confidence>=.75?'var(--amber)':'var(--red)'}">${Math.round(d.avg_confidence*100)}%</div><div class="metric-label" style="margin-top:6px">Avg confidence</div></div>`;
+    renderStatusBreakdown(d);
+    renderChart(d);
+  } catch(e) { console.warn('Stats error', e); }
+}
+
+function renderStatusBreakdown(d) {
+  const total = d.total_jobs || 1;
+  const rows = [
+    { label:'Complete', val:d.completed,   color:'var(--accent)' },
+    { label:'Processing', val:d.processing, color:'var(--blue)' },
+    { label:'Failed',   val:d.failed,     color:'var(--red)' },
+    { label:'Flagged',  val:d.flagged,    color:'var(--amber)' },
+  ];
+  document.getElementById('statusBreakdown').innerHTML = rows.map(r => `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span>${r.label}</span>
+        <span style="font-family:'DM Mono',monospace;color:${r.color}">${r.val}</span>
+      </div>
+      <div style="height:4px;background:var(--s2);border-radius:2px">
+        <div style="height:100%;width:${Math.round(r.val/total*100)}%;background:${r.color};border-radius:2px;transition:width .5s"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderChart(d) {
+  const chart = document.getElementById('throughputChart');
+  const labels = document.getElementById('chartLabels');
+  // Generate last 7 days fake bars (replace with real data from your API)
+  const days = Array.from({length:7},(_,i)=>{
+    const dt = new Date(); dt.setDate(dt.getDate()-6+i);
+    return { label: dt.toLocaleDateString('en',{weekday:'short'}), val: Math.floor(Math.random()*40+5) };
+  });
+  const max = Math.max(...days.map(d=>d.val), 1);
+  chart.innerHTML = days.map(d => {
+    const pct = Math.round(d.val/max*100);
+    return `<div class="c-bar" data-tip="${d.val} jobs" style="height:${pct}%;background:var(--accent);opacity:${.4+pct/160}"></div>`;
+  }).join('');
+  labels.innerHTML = days.map(d=>`<span style="flex:1;text-align:center">${d.label}</span>`).join('');
+}
+
+async function loadClients() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/clients`, { headers: {'X-Admin-Key': ADMIN_KEY} });
+    const clients = await r.json();
+    if (!Array.isArray(clients)) return;
+    document.getElementById('clientsTable').innerHTML = clients.length === 0
+      ? '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">No clients yet</div>'
+      : `<div style="overflow-x:auto"><table>
+          <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Jobs</th><th>API Key</th><th>Since</th></tr></thead>
+          <tbody>${clients.map(c=>`<tr>
+            <td style="font-weight:700">${esc(c.name||'—')}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${esc(c.email)}</td>
+            <td><span class="badge badge-ok">${esc(c.plan||'starter')}</span></td>
+            <td style="font-family:'DM Mono',monospace">${c.total_jobs||0}</td>
+            <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(c.api_key||'').slice(0,12)}…</span></td>
+            <td style="font-size:11px;color:var(--muted)">${c.created_at?new Date(c.created_at).toLocaleDateString('en-IN'):''}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>`;
+  } catch(e) { console.warn('Clients error', e); }
+}
+
+async function loadFlagged() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/flagged`, { headers: {'X-Admin-Key': ADMIN_KEY} });
+    const jobs = await r.json();
+    if (!Array.isArray(jobs)) return;
+    document.getElementById('flaggedTable').innerHTML = jobs.length === 0
+      ? '<div style="padding:32px;text-align:center;color:var(--accent);font-size:13px">✓ No jobs flagged for review</div>'
+      : `<div style="overflow-x:auto"><table>
+          <thead><tr><th>Filename</th><th>Type</th><th>Confidence</th><th>Client</th><th>Date</th></tr></thead>
+          <tbody>${jobs.map(j=>{
+            const pct=Math.round((j.confidence||0)*100);
+            const col=pct>=85?'var(--accent)':pct>=70?'var(--amber)':'var(--red)';
+            return `<tr>
+              <td style="font-weight:500">${esc(j.filename)}</td>
+              <td><span class="badge badge-warn">${esc(j.doc_type||'—')}</span></td>
+              <td><div class="conf-bar"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+                  <span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${pct}%</span></div></td>
+              <td style="font-size:11px;color:var(--muted)">${esc(j.client_id?.slice(0,8)||'—')}…</td>
+              <td style="font-size:11px;color:var(--muted)">${j.created_at?new Date(j.created_at).toLocaleDateString('en-IN'):''}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>`;
+  } catch(e) { console.warn('Flagged error', e); }
+}
+
+function setCheck(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'badge badge-' + (type==='ok'?'ok':type==='warn'?'warn':'err');
+  el.textContent = text;
+}
+
+function esc(s) { return String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function spin(on) {
+  const icon = document.getElementById('refreshIcon');
+  icon.style.animation = on ? 'spin 1s linear infinite' : 'none';
+}
+
+function updateRefreshTime() {
+  document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+function openDocs() {
+  if (!API_URL) return alert('Connect first');
+  window.open(API_URL + '/docs', '_blank');
+}
+
+function addClientModal() {
+  document.getElementById('addClientForm').style.display = 'block';
+  document.getElementById('addClientForm').scrollIntoView({ behavior:'smooth' });
+}
+
+async function createClient() {
+  const body = {
+    name: document.getElementById('newName').value,
+    email: document.getElementById('newEmail').value,
+    company: document.getElementById('newCompany').value,
+    plan: document.getElementById('newPlan').value,
+  };
+  const msg = document.getElementById('clientMsg');
+  try {
+    const r = await fetch(`${API_URL}/api/admin/clients`, {
+      method:'POST',
+      headers:{'X-Admin-Key':ADMIN_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Failed');
+    msg.className = 'ok-msg';
+    msg.innerHTML = `✓ Client created!<br>
+      <span style="font-family:'DM Mono',monospace;font-size:12px">API Key: <strong>${d.api_key}</strong></span><br>
+      <span style="font-size:12px;color:var(--muted)">Send this key to ${d.email}</span>`;
+    loadClients();
+  } catch(e) {
+    msg.className = 'err-msg';
+    msg.textContent = `✗ ${e.message}`;
+  }
+}
+
+// Auto-refresh every 30 seconds
+setInterval(loadAll, 30000);
+
+// Load on startup if already configured
+if (API_URL) loadAll();
+
+// Register SW not needed, but add spin keyframe to global
+const style = document.createElement('style');
+style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>

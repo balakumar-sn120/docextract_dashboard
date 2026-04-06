@@ -1,0 +1,57 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn pydantic pydantic-settings \
+            supabase groq loguru sentry-sdk prometheus-fastapi-instrumentator \
+            slowapi httpx pytest pytest-asyncio
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          SUPABASE_URL: https://test.supabase.co
+          SUPABASE_SERVICE_KEY: test-key
+          GROQ_API_KEY: test-key
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Verify deployment health
+        run: |
+          sleep 20
+          curl --fail --retry 5 --retry-delay 5 \
+            "${{ secrets.API_URL }}/health" | jq .
+        env:
+          API_URL: ${{ secrets.API_URL }}
