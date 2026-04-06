@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "libGL", "glib", "poppler_utils", "ghostscript", "pip"]
+nixPkgs = ["python311", "libGL", "glib", "poppler_utils", "ghostscript", "python311Packages.pip"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
